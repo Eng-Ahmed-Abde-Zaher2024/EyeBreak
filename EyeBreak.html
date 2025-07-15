@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <title>راحة العين - تنبيه ذكي</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap"
+      rel="stylesheet" />
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: 'Cairo', sans-serif;
+        direction: rtl;
+      }
+
+      body {
+        background: linear-gradient(135deg, #e0f7fa, #e8f5e9);
+        padding: 40px;
+        text-align: center;
+        color: #2e7d32;
+      }
+
+      h1 {
+        font-size: 32px;
+        margin-bottom: 10px;
+      }
+
+      p {
+        font-size: 18px;
+        color: #388e3c;
+      }
+
+      #controls {
+        margin: 20px 0;
+      }
+
+      input,
+      button {
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button.active {
+        background-color: #2e7d32;
+        color: white;
+        font-weight: bold;
+        border-color: #1b5e20;
+      }
+
+      #timer {
+        font-size: 48px;
+        margin: 20px;
+        color: #1b5e20;
+        cursor: pointer;
+      }
+
+      #breakAlert {
+        display: none;
+        background-color: #dcedc8;
+        padding: 20px;
+        border: 2px dashed #aed581;
+        margin-top: 20px;
+        font-size: 22px;
+        color: #33691e;
+        border-radius: 10px;
+        transition: all 0.5s;
+      }
+
+      footer {
+        margin-top: 60px;
+        background-color: #2e7d32;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>تنبيه راحة العين 👁️</h1>
+    <p>اختر المدة بين كل راحة (بالدقائق):</p>
+    <div id="controls">
+      <input
+        type="text"
+        id="intervalInput"
+        placeholder="مثلاً 60 أو 60*2"
+        value="60"
+        style="width: 180px" />
+      <button id="startBtn">تشغيل</button>
+      <button id="stopBtn">إيقاف</button>
+    </div>
+
+    <div id="timer">--:--</div>
+    <div id="breakAlert">
+      🚨 حان وقت الراحة! ابتعد عن الشاشة لمدة
+      <span id="breakCountdown">03:00</span>.
+    </div>
+
+    <!-- صوت التنبيه -->
+    <audio
+      id="breakSound"
+      src="alert.mp3"
+      type="audio/mp3"
+      preload="auto"></audio>
+
+    <footer>تم بحمد الله - Eng-Ahmed-Abdelzaher</footer>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      let countdown = null;
+      let timeLeft = 0;
+      const breakTime = 3 * 60; // 3 دقائق
+      let inBreak = false;
+
+      function evaluateInput(expr) {
+        try {
+          return Function('return ' + expr)();
+        } catch (e) {
+          alert('الرجاء إدخال قيمة صحيحة مثل 60 أو 60*2');
+          return null;
+        }
+      }
+
+      function formatTime(seconds) {
+        const m = Math.floor(seconds / 60)
+          .toString()
+          .padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      }
+
+      function updateTimerDisplay() {
+        $('#timer').text(formatTime(timeLeft));
+      }
+
+      function updateBreakDisplay() {
+        $('#breakCountdown').text(formatTime(timeLeft));
+      }
+
+      function playSound() {
+        const audio = $('#breakSound')[0];
+        audio.currentTime = 0;
+        audio.play().catch((err) => {
+          console.warn('لم يتم تشغيل الصوت:', err);
+        });
+      }
+
+      function startMainCountdown() {
+        inBreak = false;
+        const input = $('#intervalInput').val();
+        const totalMinutes = evaluateInput(input);
+        if (!totalMinutes || totalMinutes < 0.01) return;
+
+        timeLeft = Math.round(totalMinutes * 60);
+        $('#breakAlert').hide();
+        updateTimerDisplay();
+
+        $('#startBtn').addClass('active');
+
+        countdown = setInterval(() => {
+          timeLeft--;
+          updateTimerDisplay();
+
+          if (timeLeft <= 0) {
+            clearInterval(countdown);
+            countdown = null;
+            startBreak();
+          }
+        }, 1000);
+      }
+
+      function startBreak() {
+        inBreak = true;
+        timeLeft = breakTime;
+        $('#breakAlert').fadeIn();
+        updateBreakDisplay();
+        playSound();
+
+        countdown = setInterval(() => {
+          timeLeft--;
+          updateBreakDisplay();
+
+          if (timeLeft <= 0) {
+            clearInterval(countdown);
+            countdown = null;
+            $('#breakAlert').fadeOut();
+            startMainCountdown(); // إعادة العد الأساسي
+          }
+        }, 1000);
+      }
+
+      function stopCountdown() {
+        clearInterval(countdown);
+        countdown = null;
+        $('#breakAlert').fadeOut();
+        $('#timer').text('--:--');
+        $('#startBtn').removeClass('active');
+        inBreak = false;
+      }
+
+      $('#startBtn').click(() => {
+        if (!countdown) startMainCountdown();
+      });
+
+      $('#stopBtn').click(stopCountdown);
+    </script>
+  </body>
+</html>
